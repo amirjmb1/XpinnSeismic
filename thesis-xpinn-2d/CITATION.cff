@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+title: Thesis XPINN 2D Elastic Stack
+authors:
+  - name: Autonomous Research Stack
+    affiliation: Open Geophysics Initiative
+version: 0.1.0
+date-released: 2024-01-01
+repository-code: https://github.com/example/thesis-xpinn-2d

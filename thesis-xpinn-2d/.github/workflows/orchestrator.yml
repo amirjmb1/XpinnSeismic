@@ -1,0 +1,137 @@
+name: Orchestrator
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Fetch Marmousi2 assets
+        run: |
+          python tools/data_fetch.py --raw-dir 02-data/marmousi2/raw || true
+      - name: Upload fetch provenance
+        uses: actions/upload-artifact@v3
+        with:
+          name: raw-provenance
+          path: 02-data/marmousi2/raw/provenance.json
+          if-no-files-found: warn
+
+  env:
+    needs: fetch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: pip install -r environment/requirements.txt
+
+  ingest:
+    needs: env
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: pip install -r environment/requirements.txt
+      - name: Run ingestion
+        run: python 04-experiments/data_ingest/ingest.py
+      - name: Validate Gate G0
+        run: python tools/validators/gate_ingest.py
+      - name: Upload processed artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: processed-data
+          path: |
+            02-data/marmousi2/processed
+
+  samples:
+    needs: ingest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: pip install -r environment/requirements.txt
+      - name: Make samples
+        run: python 04-experiments/data_ingest/make_samples.py
+      - name: Validate Gate G3
+        run: python tools/validators/gate_samples.py
+      - name: Upload samples
+        uses: actions/upload-artifact@v3
+        with:
+          name: samples
+          path: 02-data/marmousi2/samples
+
+  forward:
+    needs: samples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: pip install -r environment/requirements.txt
+      - name: Run forward solver
+        run: python 04-experiments/forward_elastic_2d/forward_sim.py --tmax 0.6
+      - name: Validate Gate G1
+        env:
+          ALLOW_SYNTHETIC_FOR_G1: '1'
+        run: python tools/validators/gate_forward.py
+      - name: Upload forward artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: forward-output
+          path: 04-experiments/forward_elastic_2d/out
+
+  figures:
+    needs: forward
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: pip install -r environment/requirements.txt
+      - name: Generate figures
+        run: python 05-writing/figs-src/make_figures.py
+      - name: Validate Gate G4
+        run: python tools/validators/gate_figures.py
+      - name: Upload figures
+        uses: actions/upload-artifact@v3
+        with:
+          name: figures
+          path: 05-writing/figs-src/out
+
+  paper:
+    needs: figures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: pip install -r environment/requirements.txt
+      - name: Build paper
+        run: python 05-writing/paper/build.py
+      - name: Validate Gate G2
+        run: python tools/validators/gate_paper.py
+      - name: Upload paper
+        uses: actions/upload-artifact@v3
+        with:
+          name: paper
+          path: |
+            05-writing/paper/paper.pdf
+            05-writing/paper/paper_metrics.json

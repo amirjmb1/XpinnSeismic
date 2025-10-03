@@ -1,0 +1,25 @@
+# raw + generated data (keep folder via .gitkeep)
+02-data/marmousi2/raw/**
+!02-data/marmousi2/raw/.gitkeep
+02-data/marmousi2/processed/**
+!02-data/marmousi2/processed/.gitkeep
+02-data/marmousi2/samples/**
+!02-data/marmousi2/samples/.gitkeep
+
+# simulation & figures outputs (keep folder via .gitkeep)
+04-experiments/**/out/**
+!04-experiments/**/out/.gitkeep
+05-writing/figs-src/out/**
+!05-writing/figs-src/out/.gitkeep
+
+# paper build products
+05-writing/paper/paper.pdf
+05-writing/paper/paper_metrics.json
+05-writing/paper/.tectonic/
+05-writing/paper/*.log
+05-writing/paper/*.blg
+05-writing/paper/*.synctex.gz
+
+# python cache
+**/__pycache__/
+**/*.pyc
